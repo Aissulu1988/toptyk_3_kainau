@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Қайнау температурасы және қысым — виртуалды зертхана</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#eef6fa;--card:#fff;--ink:#17323f;--mute:#5a7887;--line:#d5e5ee;--acc:#0b7f86;--hot:#e4572e;--ok:#2a9d5c;--grid:#e4eef4;--soft:#e6f3f6}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1c23;--card:#162a33;--ink:#e5f1f6;--mute:#93b0bd;--line:#2a4350;--grid:#233843;--soft:#1d3640}}
+:root[data-theme="dark"]{--bg:#0e1c23;--card:#162a33;--ink:#e5f1f6;--mute:#93b0bd;--line:#2a4350;--grid:#233843;--soft:#1d3640}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "Trebuchet MS","Segoe UI",Tahoma,sans-serif;padding:18px 14px 40px}
+h1{font-size:22px;margin:0 0 4px}h2{font-size:16px;margin:0 0 10px}
+.q{color:var(--mute);max-width:70ch;margin:0 0 16px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr));gap:14px;max-width:1100px;margin:0 auto}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}
+.wide{grid-column:1/-1}
+canvas{width:100%;height:auto;display:block;border-radius:10px;background:var(--soft)}
+.bar{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;align-items:center}
+button{font:inherit;font-weight:700;border:0;border-radius:10px;padding:9px 14px;background:var(--acc);color:#fff;cursor:pointer;min-height:40px}
+button.gray{background:var(--soft);color:var(--ink);border:1px solid var(--line)}
+button:disabled{opacity:.4;cursor:not-allowed}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+input[type=range]{width:100%;accent-color:var(--acc);height:34px}
+textarea{font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:8px;padding:6px 8px;width:100%;min-height:54px;resize:vertical}
+.read{display:flex;gap:20px;flex-wrap:wrap;margin-bottom:8px}
+.read b{display:block;font-size:24px;line-height:1.2}.read small{color:var(--mute);font-weight:600}
+.info{padding:12px;border-radius:10px;background:var(--soft);margin-top:10px;min-height:96px}.info div{margin:3px 0}
+ol.steps{margin:0;padding-left:0;list-style:none}ol.steps li{padding:6px 0 6px 30px;position:relative;border-bottom:1px solid var(--line)}
+ol.steps li:before{content:"";position:absolute;left:4px;top:9px;width:16px;height:16px;border-radius:50%;border:2px solid var(--line)}
+ol.steps li.done:before{background:var(--ok);border-color:var(--ok)}ol.steps li.done{color:var(--mute)}
+table{width:100%;border-collapse:collapse}th,td{border:1px solid var(--line);padding:6px;text-align:left;vertical-align:top}th{background:var(--soft)}
+.hint{color:var(--hot);font-weight:700;min-height:22px;margin-top:6px}
+.note{font-size:13px;color:var(--mute);margin:8px 0 0}
+label{display:block;font-weight:700;margin:10px 0 4px}
+#ans{margin-top:10px;padding:10px 12px;border-left:4px solid var(--ok);background:var(--soft);border-radius:6px}#ans p{margin:4px 0}
+</style>
+</head>
+<body>
+<h1>Қайнау температурасы және қысым — виртуалды зертхана</h1>
+<p class="q"><b>Зерттеу сұрағы:</b> атмосфералық қысым өзгергенде судың қайнау температурасы қалай өзгереді?</p>
+
+<div class="grid">
+<section class="card wide">
+  <h2>Тәжірибе</h2>
+  <div class="read">
+    <div><small>Қысым</small><b id="rp"></b></div>
+    <div><small>Қайнау температурасы (осы қысымда)</small><b id="rb"></b></div>
+    <div><small>Судың температурасы</small><b id="rt"></b></div>
+  </div>
+  <canvas id="lab" aria-label="Су құйылған ыдыс, қыздырғыш, термометр және манометр"></canvas>
+  <label for="sl" style="margin-top:12px">Атмосфералық қысым</label>
+  <input type="range" id="sl" min="10" max="250" step="0.1" value="101.3">
+  <div class="bar" id="pre"></div>
+  <div class="bar"><button id="bStart">Бастау</button><button id="bPause" class="gray">Кідірту</button><button id="bReset" class="gray">Қайта бастау</button></div>
+  <div class="info" id="info" aria-live="polite"></div>
+</section>
+
+<section class="card">
+  <h2>Қысым – қайнау температурасы графигі</h2>
+  <canvas id="gr" aria-label="Қысым мен қайнау температурасының графигі"></canvas>
+  <p class="note">Сызық – модель бойынша есептелген тәуелділік. Дөңгелектер – кестеге жазылған нәтижелер, қызыл шеңбер – қазіргі қысым.</p>
+  <p class="note">Есептеу моделі: судың қаныққан бу қысымының жуық теңдеуі (Антуан теңдеуі). Су көпіршіктің ішіндегі қаныққан бу қысымы сыртқы қысымға теңескенде қайнайды.</p>
+</section>
+
+<section class="card">
+  <h2>Зерттеу кезеңдері</h2>
+  <ol class="steps" id="steps">
+    <li>Қалыпты қысымда (101,3 кПа) қайнау температурасын анықта.</li>
+    <li>Қысымды төмендетіп, өзгерісті бақыла.</li>
+    <li>Қысымды арттырып, қайта бақыла.</li>
+    <li>Әр жағдайдағы қысым мен қайнау температурасын кестеге енгіз және қорытынды жаз.</li>
+    <li>Графикке қарап, байланысты анықта: төмендегі сұрақтарға жауап бер.</li>
+  </ol>
+</section>
+
+<section class="card wide">
+  <h2>Зерттеу кестесі</h2>
+  <p class="note" style="margin-top:0">Кестеге жазу үшін су қайнап тұруы керек: «Бастау» басып, температура көтерілгенше күт.</p>
+  <table>
+    <tr><th>Қысым</th><th>Қайнау температурасы</th><th>Қорытынды</th><th></th></tr>
+    <tr><td><b>Төмен қысым</b> (90 кПа-дан төмен)<div id="rp0"></div></td><td id="rT0">–</td><td><textarea id="c0" placeholder="Қайнау температурасы қалай өзгерді?"></textarea></td><td><button data-m="0">Тіркеу</button></td></tr>
+    <tr><td><b>Қалыпты қысым</b> (шамамен 101,3 кПа)<div id="rp1"></div></td><td id="rT1">–</td><td><textarea id="c1" placeholder="Қалыпты қысымда су неше градуста қайнайды?"></textarea></td><td><button data-m="1">Тіркеу</button></td></tr>
+    <tr><td><b>Жоғары қысым</b> (115 кПа-дан жоғары)<div id="rp2"></div></td><td id="rT2">–</td><td><textarea id="c2" placeholder="Қайнау температурасы қалай өзгерді?"></textarea></td><td><button data-m="2">Тіркеу</button></td></tr>
+  </table>
+  <div class="hint" id="hint" role="status"></div>
+</section>
+
+<section class="card wide">
+  <h2>Өмірмен байланыс және қорытынды</h2>
+  <label for="q0">1. Неліктен биік тауда су 100 °C-тан төмен температурада қайнайды?</label><textarea id="q0"></textarea>
+  <label for="q1">2. Қысым қазанында тағам неге тезірек піседі?</label><textarea id="q1"></textarea>
+  <label for="q2">3. Қысым өзгерісі қайнау процесіне қалай әсер етеді?</label><textarea id="q2"></textarea>
+  <label for="q3">Қорытынды: қысымның артуы мен төмендеуі қайнау температурасына қалай әсер етеді? Дәлелде.</label><textarea id="q3"></textarea>
+  <div class="bar"><button id="bCmp" disabled>Үлгі жауаппен салыстыру</button><span class="note" id="cmpNote">Кестенің үш жолын тіркегеннен кейін ашылады.</span></div>
+  <div id="ans" hidden>
+    <p><b>1.</b> Биікте ауа қабаты жұқа, атмосфералық қысым төмен. Көпіршіктегі қаныққан бу қысымы төмен сыртқы қысымға төмен температурада-ақ теңеседі. Мысалы, 3000 м биіктікте (шамамен 70 кПа) су шамамен 90 °C-та қайнайды.</p>
+    <p><b>2.</b> Қысым қазанының қақпағы тығыз жабылады, ішкі қысым шамамен 200 кПа-ға дейін артады. Су шамамен 120 °C-та қайнайды. Ыстығырақ су тағамды тезірек пісіреді.</p>
+    <p><b>3.</b> Қысым артса, қайнау температурасы артады, қысым төмендесе – төмендейді. Қайнау сыртқы қысым көпіршіктегі қаныққан бу қысымына теңескенде басталады.</p>
+    <p><b>Қорытынды үлгісі:</b> графикте қысым өскен сайын қайнау температурасы да жоғарылайды: 50 кПа-да шамамен 81 °C, 101,3 кПа-да 100 °C, 200 кПа-да шамамен 120 °C. Сондықтан қысымды арттыру қайнау температурасын көтереді, төмендету – түсіреді.</p>
+  </div>
+</section>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const dpr=Math.min(2,window.devicePixelRatio||1);
+function cv(id,w,h){const c=$(id);c.width=w*dpr;c.height=h*dpr;const x=c.getContext('2d');x.setTransform(dpr,0,0,dpr,0,0);return x}
+const X=cv('lab',480,340),G=cv('gr',460,290);
+const css=getComputedStyle(document.documentElement),col=n=>css.getPropertyValue(n).trim();
+const R=(a,b)=>a+Math.random()*(b-a);
+const f1=v=>v.toFixed(1).replace('.',','),f2=v=>v.toFixed(2).replace('.',',');
+function boilT(P){const mm=P*7.50062,[A,B,C]=mm<=1500?[8.07131,1730.63,233.426]:[8.14019,1810.94,244.485];return B/(A-Math.log10(mm))-C}
+const PRE=[['Эверест басы (≈34 кПа)',34],['3000 м биіктік (≈70 кПа)',70],['Қалыпты (101,3 кПа)',101.3],['Қысым қазаны (≈200 кПа)',200]];
+let S;
+function init(){S={P:101.3,T:20,run:false,rec:[null,null,null],bub:[],st:[],a1:0,a2:0,a3:0};$('sl').value=101.3;$('ans').hidden=true;
+  for(let i=0;i<3;i++){$('rT'+i).textContent='–';$('rp'+i).textContent=''}hint('')}
+const Tb=()=>boilT(S.P);
+const flash=()=>S.T>Tb()+.5;
+const isBoil=()=>S.run&&S.T>=Tb()-.05;
+
+function step(dt){
+  const tb=Tb();
+  if(S.T<tb)S.T=Math.min(tb,S.T+6*dt);else S.T=Math.max(tb,S.T-15*dt);
+  const b=isBoil(),sc=Math.min(2,Math.max(.7,Math.pow(101.3/S.P,.45)));
+  S.a1+=dt*(b?45+(flash()?80:0):0);while(S.a1>=1){S.a1--;S.bub.push({x:R(70,200),y:262,r:R(2,4)*sc,v:R(50,100),k:'b'})}
+  const tiny=!b&&S.T>45?(S.T-45)/55*5:0;S.a2+=dt*tiny;while(S.a2>=1){S.a2--;S.bub.push({x:R(70,200),y:262,r:1.6,v:R(20,35),k:'t',h:R(40,120)})}
+  S.a3+=dt*(Math.pow(S.T/tb,4)*8+(b?25:0));while(S.a3>=1){S.a3--;S.st.push({x:R(65,205),y:130,r:5,l:1.8,m:1.8})}
+}
+function anim(dt){
+  S.bub=S.bub.filter(p=>{p.y-=p.v*dt;if(p.k=='t')return 262-p.y<p.h;return p.y>138});
+  S.st=S.st.filter(p=>{p.y-=32*dt;p.r+=12*dt;return(p.l-=dt)>0});
+}
+
+function drawLab(time){
+  const x=X,tb=Tb(),b=isBoil();x.clearRect(0,0,480,340);
+  x.fillStyle=S.run?col('--hot'):'#8ea0aa';x.fillRect(40,272,190,18);x.fillRect(58,290,10,22);x.fillRect(202,290,10,22);
+  if(S.run){const g=x.createRadialGradient(135,282,5,135,282,120);g.addColorStop(0,'rgba(255,120,40,.5)');g.addColorStop(1,'rgba(255,120,40,0)');x.fillStyle=g;x.fillRect(10,220,250,100)}
+  x.fillStyle=col('--mute');x.font='12px sans-serif';x.textAlign='center';x.fillText('Қыздырғыш: '+(S.run?'қосулы':'өшірулі'),135,330);
+  const top=130,r=70+(S.T-20)*.55,g=170-(S.T-20)*.2,bl=235-(S.T-20)*.25;
+  x.fillStyle=`rgb(${r|0},${g|0},${bl|0})`;x.beginPath();x.moveTo(50,270);x.lineTo(50,top);
+  for(let px=50;px<=220;px+=5)x.lineTo(px,top+(b?Math.sin(px*.16+time*9)*2.5:0));x.lineTo(220,270);x.closePath();x.fill();
+  for(const p of S.bub){x.beginPath();x.arc(p.x,p.y,p.r,0,6.283);x.fillStyle='rgba(255,255,255,.6)';x.fill();x.strokeStyle='rgba(255,255,255,.9)';x.lineWidth=1;x.stroke()}
+  x.strokeStyle=col('--ink');x.lineWidth=3;x.beginPath();x.moveTo(46,70);x.lineTo(50,270);x.lineTo(220,270);x.lineTo(224,70);x.stroke();
+  if(S.P>=130){x.fillStyle='#8c9ba5';x.fillRect(42,58,190,14);x.fillRect(125,40,20,18);x.fillStyle=col('--ink');x.fillText('қақпақ, клапан',135,30)}
+  for(const p of S.st){x.beginPath();x.arc(p.x,p.y,p.r,0,6.283);x.fillStyle=`rgba(190,200,210,${.4*p.l/p.m})`;x.fill()}
+  // термометр
+  const ty=T=>290-T/130*240;
+  x.fillStyle=col('--card');x.strokeStyle=col('--ink');x.lineWidth=2;x.beginPath();x.roundRect(262,40,14,252,7);x.fill();x.stroke();
+  x.fillStyle=col('--hot');x.beginPath();x.arc(269,302,13,0,6.283);x.fill();x.fillRect(266,ty(S.T),6,302-ty(S.T));
+  x.fillStyle=col('--mute');x.font='11px sans-serif';x.textAlign='right';
+  for(let v=0;v<=120;v+=20){x.fillRect(254,ty(v),6,1.5);x.fillText(v+'°',250,ty(v)+4)}
+  x.fillStyle=col('--acc');x.beginPath();x.moveTo(280,ty(tb));x.lineTo(292,ty(tb)-6);x.lineTo(292,ty(tb)+6);x.fill();
+  x.textAlign='left';x.font='bold 11px sans-serif';x.fillText('қайнау '+f1(tb)+'°',296,ty(tb)+4);
+  // манометр
+  const cx=410,cy=120,rr=52,a=P=>(135+Math.min(P,300)/300*270)*Math.PI/180;
+  x.fillStyle=col('--card');x.strokeStyle=col('--ink');x.lineWidth=3;x.beginPath();x.arc(cx,cy,rr,0,6.283);x.fill();x.stroke();
+  x.font='10px sans-serif';x.textAlign='center';x.fillStyle=col('--mute');x.lineWidth=1.5;
+  for(let v=0;v<=300;v+=50){const an=a(v);x.strokeStyle=col('--mute');x.beginPath();x.moveTo(cx+Math.cos(an)*(rr-8),cy+Math.sin(an)*(rr-8));x.lineTo(cx+Math.cos(an)*(rr-2),cy+Math.sin(an)*(rr-2));x.stroke();
+    if(v%100==0)x.fillText(v,cx+Math.cos(an)*(rr-18),cy+Math.sin(an)*(rr-18)+3)}
+  x.strokeStyle=col('--hot');x.lineWidth=3;x.beginPath();x.moveTo(cx,cy);x.lineTo(cx+Math.cos(a(S.P))*(rr-10),cy+Math.sin(a(S.P))*(rr-10));x.stroke();
+  x.fillStyle=col('--ink');x.beginPath();x.arc(cx,cy,4,0,6.283);x.fill();
+  x.textAlign='center';x.font='12px sans-serif';x.fillText('кПа',cx,cy+rr+16);
+  const alt=44330*(1-Math.pow(S.P/101.325,.1903));
+  const lbl=S.P<99?['Биіктік шамамен',Math.round(alt/100)*100+' м']:S.P>110?['Қысым қазаны','режимі']:['Теңіз деңгейі','(қалыпты қысым)'];
+  x.fillStyle=col('--ink');x.font='bold 12px sans-serif';x.fillText(lbl[0],cx,cy+rr+40);x.fillText(lbl[1],cx,cy+rr+56);
+}
+
+const PX=[];for(let p=10;p<=250;p+=2)PX.push(p);
+function drawGr(){
+  const x=G,W=460,H=290,l=50,b=36,r=14,t=14,Xp=p=>l+(p-0)/260*(W-l-r),Y=T=>H-b-(T-30)/105*(H-b-t);
+  x.clearRect(0,0,W,H);x.font='11px sans-serif';
+  for(let v=40;v<=130;v+=20){x.strokeStyle=col('--grid');x.lineWidth=1;x.beginPath();x.moveTo(l,Y(v));x.lineTo(W-r,Y(v));x.stroke();x.fillStyle=col('--mute');x.textAlign='right';x.fillText(v,l-6,Y(v)+4)}
+  x.textAlign='center';for(let p=0;p<=250;p+=50){x.fillStyle=col('--mute');x.fillText(p,Xp(p),H-b+14)}
+  x.fillText('Қысым, кПа',W/2,H-4);x.save();x.translate(12,H/2);x.rotate(-Math.PI/2);x.fillText('Қайнау температурасы, °C',0,0);x.restore();
+  x.setLineDash([5,4]);x.strokeStyle=col('--mute');x.beginPath();x.moveTo(Xp(101.3),Y(30));x.lineTo(Xp(101.3),Y(100));x.lineTo(l,Y(100));x.stroke();x.setLineDash([]);
+  x.strokeStyle=col('--acc');x.lineWidth=3;x.beginPath();PX.forEach((p,i)=>i?x.lineTo(Xp(p),Y(boilT(p))):x.moveTo(Xp(p),Y(boilT(p))));x.stroke();
+  S.rec.forEach((r,i)=>{if(!r)return;x.beginPath();x.arc(Xp(r.P),Y(r.T),8,0,6.283);x.fillStyle=col('--acc');x.fill();x.fillStyle='#fff';x.font='bold 11px sans-serif';x.textAlign='center';x.fillText(i+1,Xp(r.P),Y(r.T)+4)});
+  x.beginPath();x.arc(Xp(S.P),Y(Tb()),9,0,6.283);x.strokeStyle=col('--hot');x.lineWidth=2.5;x.stroke();
+}
+
+function ui(){
+  const tb=Tb();
+  $('rp').textContent=f1(S.P)+' кПа = '+f2(S.P/101.325)+' атм';
+  $('rb').textContent=f1(tb)+' °C';$('rt').textContent=f1(S.T)+' °C';
+  const b=isBoil();
+  $('info').innerHTML=`<div>Су көпіршіктегі қаныққан бу қысымы сыртқы қысымға (${f1(S.P)} кПа) тең болғанда қайнайды. Бұл қысымда қайнау температурасы – <b>${f1(tb)} °C</b>.</div>`+
+   `<div><b>${!S.run&&S.T<=20.05?'«Бастау» батырмасын бас: қыздырғыш қосылады.':!S.run?'Тәжірибе кідіртілді.':flash()?'Қысым күрт төмендеді: су қайнау температурасынан ыстық, сондықтан қарқынды қайнап, суып жатыр.':b?'Су қайнап жатыр, температура '+f1(S.T)+' °C. Қысымды өзгертіп көр.':'Су қызып жатыр. Қайнауға дейін '+f1(tb-S.T)+' °C қалды.'}</b></div>`;
+  const dn=S.rec.map(r=>!!r),q=[0,1,2,3].every(i=>$('q'+i).value.trim().length>3),cc=[0,1,2].every(i=>$('c'+i).value.trim().length>3);
+  const st=[dn[1],dn[0],dn[2],dn.every(Boolean)&&cc,q];
+  document.querySelectorAll('#steps li').forEach((li,i)=>li.classList.toggle('done',st[i]));
+  $('bStart').disabled=S.run;$('bPause').disabled=!S.run;$('bCmp').disabled=!dn.every(Boolean);$('cmpNote').hidden=dn.every(Boolean);
+}
+
+let prev=performance.now();
+function frame(n){const dt=Math.min(.05,(n-prev)/1000);prev=n;if(S.run)step(dt);anim(dt);drawLab(n/1000);drawGr();ui();requestAnimationFrame(frame)}
+
+let ht;function hint(m){$('hint').textContent=m;clearTimeout(ht);ht=setTimeout(()=>$('hint').textContent='',6000)}
+function meas(i){
+  const ok=[S.P<=90,Math.abs(S.P-101.3)<=2,S.P>=115][i];
+  if(!isBoil()){hint('Су әлі қайнап тұрған жоқ. «Бастау» басып, температура көтерілгенше күт.');return}
+  if(!ok){hint(['Бұл жол үшін қысымды 90 кПа-дан төмен ет.','Бұл жол үшін қысымды қалыпты (101,3 кПа) етіп қой.','Бұл жол үшін қысымды 115 кПа-дан жоғары ет.'][i]);return}
+  S.rec[i]={P:S.P,T:Tb()};$('rT'+i).textContent=f1(Tb())+' °C';$('rp'+i).textContent='Тіркелген: '+f1(S.P)+' кПа ('+f2(S.P/101.325)+' атм)';
+}
+document.querySelectorAll('button[data-m]').forEach(b=>b.onclick=()=>meas(+b.dataset.m));
+$('sl').oninput=e=>S.P=+e.target.value;
+PRE.forEach(([n,p])=>{const b=document.createElement('button');b.className='gray';b.textContent=n;b.onclick=()=>{S.P=p;$('sl').value=p};$('pre').appendChild(b)});
+$('bStart').onclick=()=>S.run=true;
+$('bPause').onclick=()=>S.run=false;
+$('bReset').onclick=init;
+$('bCmp').onclick=()=>$('ans').hidden=false;
+init();requestAnimationFrame(frame);
+</script>
+</body>
+</html>
